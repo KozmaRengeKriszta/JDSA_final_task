@@ -274,6 +274,40 @@ GROUP BY country
 ORDER BY rev_by_loc DESC;
 
 
+--REVENUE / BUYERS / LOCATION
+SELECT q1.country, q1.total_rev, q2.num_cust,
+       q1.total_rev / q2.num_cust as avg_rev_cust
+FROM (SELECT country, SUM(price) AS total_rev
+      FROM read
+      JOIN buy ON read.user_id = buy.user_id
+      WHERE source != ''
+      GROUP BY country
+      ORDER BY total_rev DESC) as q1
+JOIN (SELECT country, COUNT(*) AS num_cust
+      FROM read
+      JOIN buy ON read.user_id = buy.user_id
+      WHERE source != ''
+      GROUP BY country
+      ORDER BY num_cust DESC) as q2
+ON q1.country = q2.country
+ORDER BY avg_rev_cust DESC;
+
+--REVENUE / READERS / LOCATION 
+SELECT first_query.country, first_query.num_readers, first_query.total_rev,
+       CAST(total_rev AS FLOAT) / num_readers as avg_rev_readers
+FROM (SELECT read.country, COUNT(DISTINCT user_id) as num_readers, total_rev.total_rev
+      FROM read
+      JOIN (SELECT read.country, SUM(buy.price) as total_rev
+            FROM buy
+            JOIN read
+            ON buy.user_id = read.user_id
+            WHERE source != ''
+            GROUP BY read.country) as total_rev
+      ON read.country = total_rev.country
+      GROUP BY read.country, total_rev.total_rev) as first_query
+ORDER BY avg_rev_readers DESC;
+
+
 --FUNNEL ANALYSIS
 SELECT read_date,
        country,
